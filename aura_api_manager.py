@@ -12,9 +12,8 @@ import graphdatascience
 
 # TEMP CONSTANTS
 api_base = 'https://api.neo4j.io/'
-#default_cred_file = "/Users/lrazo/Frigomex Dropbox/Lee Razo/__professional/_documents_neo4j/demo/aura_api/20231129-Neo4j-credentials-leerazo_aura_test-Created-2023-11-29.txt"
-default_cred_file = "/Users/lrazo/Frigomex Dropbox/Lee Razo/__professional/_documents_neo4j/demo/aura_api/20231129-Neo4j-credentials-leerazo_aura_pro-Created-2023-11-29.txt"
 tmp_dir = './.tmp'
+default_cred_file = os.path.join(tmp_dir, "neo4j-api-creds.txt") 
 
 cred_file = default_cred_file
 
@@ -132,31 +131,6 @@ def list_tenants(access_token, api_base, tenant_id=None):
     return aura_tenants
 
 
-def list_instances(access_token, api_base, tenant_id=None):
-    api_endpoint = urljoin(api_base, '/v1/instances') 
-
-    aura_instances = {}
-
-    print()
-    print('api_endpoint:', api_endpoint)
-    print()
-
-    list_cmd = "curl -s -X 'GET' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}'".format(api_endpoint, access_token)
-#    print('list_cmd:')
-#    print(list_cmd)
-
-    list_instances = json.loads(subprocess.check_output(list_cmd, shell=True))['data']
-    print('aura_instances:')
-    for instance in list_instances:
-        print(instance)
-        aura_instances[instance['id']] = {}
-        aura_instances[instance['id']]['instance_id'] = instance['id'] 
-        aura_instances[instance['id']]['instance_name'] = instance['name'] 
-        aura_instances[instance['id']]['cloud_provider'] = instance['cloud_provider'] 
-        aura_instances[instance['id']]['tenant_id'] = instance['tenant_id'] 
-
-    return aura_instances
-
 def tenant_info(access_token, api_base, tenant_id):
     api_endpoint = urljoin(api_base, '/v1/tenants/' + tenant_id)
 
@@ -182,6 +156,33 @@ def tenant_info(access_token, api_base, tenant_id):
         tenant_data[tenant_info['id']]['instance_configurations'] = list(tenant_info['instance_configurations'])
 
     return tenant_data
+
+
+def list_instances(access_token, api_base, tenant_id=None):
+    api_endpoint = urljoin(api_base, '/v1/instances') 
+
+    aura_instances = {}
+
+    print()
+    print('api_endpoint:', api_endpoint)
+    print()
+
+    list_cmd = "curl -s -X 'GET' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}'".format(api_endpoint, access_token)
+#    print('list_cmd:')
+#    print(list_cmd)
+
+    list_instances = json.loads(subprocess.check_output(list_cmd, shell=True))['data']
+    print('aura_instances:')
+    for instance in list_instances:
+        print(instance)
+        aura_instances[instance['id']] = {}
+        aura_instances[instance['id']]['instance_id'] = instance['id'] 
+        aura_instances[instance['id']]['instance_name'] = instance['name'] 
+        aura_instances[instance['id']]['cloud_provider'] = instance['cloud_provider'] 
+        aura_instances[instance['id']]['tenant_id'] = instance['tenant_id'] 
+
+    return aura_instances
+
 
 def instance_info(access_token, api_base, instance_id):
     api_endpoint = urljoin(api_base, '/v1/instances/' + instance_id)
@@ -331,6 +332,25 @@ def export_credentials(instance_details):
     with open(cred_file, 'w') as f:
         f.write(credentials_file)
 
+
+def display_dict(dictionary, description=None):
+    if description:
+        print(description)
+    
+    for l1 in dictionary:
+        print(l1, 'is of type', type(dictionary[l1]))
+        if isinstance(dictionary[l1], str):
+            print(l1 + ': ' + dictionary[l1])
+        elif isinstance(dictionary[l1], dict):
+            for l2 in dictionary[l1]:
+                print('\t' + l2, 'is of type', type(dictionary[l1][l2]))
+                if isinstance(dictionary[l1][l2], str):
+                    print('\t' + l2 + ': ' + dictionary[l1][l2])
+                elif isinstance(dictionary[l1][l2], list):
+                    print('\t' + l2 + ':' )
+                    for l3 in dictionary[l1][l2]:
+                        print('\t\t' + str(l3))
+
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--list-instances', action='store_true', help="List Aura instances")
@@ -373,8 +393,9 @@ def main():
         print()
         print('tenant_info:')
         tenant_data = tenant_info(access_token, api_base, args['tenant_info'])
-        print('tenant_data:')
-        print(tenant_data)
+        display_dict(tenant_data, description="Tenant Infomania")
+        #print('tenant_data:')
+        #print(tenant_data)
 
     if args['instance_info']:
         print()
