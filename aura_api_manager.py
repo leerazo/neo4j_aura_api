@@ -13,6 +13,7 @@ import graphdatascience
 # TEMP CONSTANTS
 api_base = 'https://api.neo4j.io/'
 tmp_dir = './.tmp'
+# I'll need to replace this later with either something interactive or a standard JSON template that will contain this information. 
 default_cred_file = os.path.join(tmp_dir, "neo4j-api-creds.txt") 
 
 cred_file = default_cred_file
