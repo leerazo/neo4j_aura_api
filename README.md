@@ -19,7 +19,7 @@ Now, let's create a Virtual Environment to isolate our Python environment and ac
 
     apt-get install -y python3-venv
     python3 -m venv /app/venv/aura-api
-    source /app/venv/genai/bin/activate
+    source /app/venv/aura-api/bin/activate
 
 To install dependencies:
 
