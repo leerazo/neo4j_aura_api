@@ -2,7 +2,7 @@
 
 This repository is intended to help streamline Neo4j Aura deployment and data loading for the purposes of quickly and smoothly creating cloud demos. p
 
-## Preparation
+## Install Environment
 
 In order to make use of these procedures, you will need to have an Aura account created either through a cloud marketplace or directly from Neo4j. You will also need to create an API key in your Aura account. The documents from links below will guide you through the process of setting this up.
 
@@ -25,6 +25,7 @@ To install dependencies:
 
     pip install -r requirements.txt
 
+## Setup Neo4j Aura API Access 
 
 Next, follow the links below to setup API access to Aura
 - [Setup Aura API key](01-setup_aura_api/01_setup_aura_api.ipynb)
