@@ -28,4 +28,4 @@ To install dependencies:
 ## Setup Neo4j Aura API Access 
 
 Next, follow the links below to setup API access to Aura
-- [Setup Aura API key](01-setup_aura_api/01_setup_aura_api.ipynb)
+- [Instructions for setting up your Aura API key](01-setup_aura_api/01_setup_aura_api.ipynb)
