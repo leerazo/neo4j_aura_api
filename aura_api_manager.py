@@ -322,11 +322,11 @@ def delete_instance(access_token, api_base, instance_id):
 def export_credentials(instance_details):
     filename = 'Neo4j-' + instance_details['id'] + '-' + instance_details['name'] + '.txt' 
     credentials_file = ""
-    credentials_file += 'NEO$J_URI=' + instance_details['connection_url'] + '\n'
-    credentials_file += 'NEO$J_USERNAME=' + instance_details['username'] + '\n'
-    credentials_file += 'NEO$J_PASSWORD=' + instance_details['password'] + '\n'
-    credentials_file += 'NEO$J_INSTANCEID=' + instance_details['id'] + '\n'
-    credentials_file += 'NEO$J_INSTANCENAME=' + instance_details['name'] + '\n'
+    credentials_file += 'NEO4J_URI=' + instance_details['connection_url'] + '\n'
+    credentials_file += 'NEO4J_USERNAME=' + instance_details['username'] + '\n'
+    credentials_file += 'NEO4J_PASSWORD=' + instance_details['password'] + '\n'
+    credentials_file += 'NEO4J_INSTANCEID=' + instance_details['id'] + '\n'
+    credentials_file += 'NEO4J_INSTANCENAME=' + instance_details['name'] + '\n'
 
     cred_file = os.path.join(tmp_dir, filename)
 
@@ -354,6 +354,7 @@ def display_dict(dictionary, description=None):
 
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--api-credentials', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
     parser.add_argument('--list-instances', action='store_true', help="List Aura instances")
     parser.add_argument('--list-tenants', action='store_true', help="List Aura tenants")
     parser.add_argument('--tenant-info', metavar="TENANT_ID")
@@ -371,6 +372,10 @@ def parseargs(defaults=None, config_files=None):
 
 def main():
     args = parseargs()
+
+    if args['api_credentials']:
+        api_creds = get_creds(args['api_credentials'])
+
     api_creds = get_creds(cred_file)
     access_token = authenticate_api(api_creds, api_base, tmp_dir)
 
