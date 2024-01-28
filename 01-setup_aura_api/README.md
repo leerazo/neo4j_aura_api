@@ -1,4 +1,4 @@
-# Setting up API access for Neo4j Aura Enterprise 
+# Setting up API access for Neo4j Aura 
 
 This guide will walk you through the steps for setting up API access for Neo4j Aura Enterprise. 
 Prerequisite: You will need a Neo4j Aura account set up either through one of the cloud marketplaces or directly from Neo4j. 
