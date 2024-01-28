@@ -30,4 +30,4 @@ To install dependencies:
 Next, follow the links below to setup API access to Aura
 - [Instructions for setting up your Aura API key](01-setup_aura_api/)
 - [Authenticating and exploring the Aura environment (Notebook)](02-using_aura_api/)
-- [Deploying Aura and loading data] (03-deploying_aura)
+- [Deploying Aura and loading data](03-deploying_aura)
