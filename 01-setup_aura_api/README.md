@@ -21,3 +21,7 @@ Click the "Create" button from the Account Details screen and give the new API k
 ### Step 3: **Download** the API credentials file to a location where these scripts will be able to access it later on.
 
 ![04.png](screenshots/04.png)
+
+### Congratulations!
+
+Once you've completed these steps, you can move onto [the next part and start exploring](../02-using_aura_api/). 
