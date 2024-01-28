@@ -1,4 +1,4 @@
-# Neo4j Aura Demo Manager
+# Neo4j Aura API Tutorial 
 
 This repository is intended to help streamline Neo4j Aura deployment and data loading for the purposes of quickly and smoothly creating cloud-first demos. 
 
