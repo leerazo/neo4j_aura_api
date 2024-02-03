@@ -18,14 +18,18 @@ import graphdatascience
 api_base = 'https://api.neo4j.io/'
 
 # CHANGE THIS
-tmp_dir = '/Users/lrazo/.tmp' 
+#tmp_dir = '/Users/lrazo/.tmp' 
+tmp_dir = '/Users/lrazo/Frigomex Dropbox/Lee Razo/__tech/sysadmin/tmp/neo4j_demo_launcher' 
+deployment_dir = os.path.join(tmp_dir, 'demo_deployments')
+credential_dir = os.path.join(tmp_dir, 'aura_credentials')
+auth_dir = os.path.join(tmp_dir, 'aura_api_auth')
 
 # I'll need to replace this later with either something interactive or a standard JSON template that will contain this information. 
 default_cred_file = os.path.join(tmp_dir, "neo4j-api-creds.txt") 
 
 cred_file = default_cred_file
 
-
+"""
 def list_tenants(access_token, api_base, tenant_id=None):
     #api_endpoint = 'https://api.neo4j.io/v1/tenants'
 
@@ -185,23 +189,6 @@ def delete_instance(access_token, api_base, instance_id):
         if os.path.isfile(cred_filename):
             os.system('rm ' + cred_filename)
     
-
-
-def export_credentials(instance_details):
-    filename = 'Neo4j-' + instance_details['id'] + '-' + instance_details['name'] + '.txt' 
-    credentials_file = ""
-    credentials_file += 'NEO4J_URI=' + instance_details['connection_url'] + '\n'
-    credentials_file += 'NEO4J_USERNAME=' + instance_details['username'] + '\n'
-    credentials_file += 'NEO4J_PASSWORD=' + instance_details['password'] + '\n'
-    credentials_file += 'NEO4J_INSTANCEID=' + instance_details['id'] + '\n'
-    credentials_file += 'NEO4J_INSTANCENAME=' + instance_details['name'] + '\n'
-
-    cred_file = os.path.join(tmp_dir, filename)
-
-    with open(cred_file, 'w') as f:
-        f.write(credentials_file)
-
-
 def display_dict(dictionary, description=None):
     if description:
         print(description)
@@ -219,8 +206,22 @@ def display_dict(dictionary, description=None):
                     print('\t' + l2 + ':' )
                     for l3 in dictionary[l1][l2]:
                         print('\t\t' + str(l3))
+"""
 
 ##### START NEW FROM HERE ####
+
+def backslash_escape(string):
+
+    special_characters = [' ',"^","$","&","|","?","*","+","(",")","\'"]
+
+    # Remove any existing backslashes
+    new_string = string.replace("\\", "")
+
+    # Replace any special characters with escape slash
+    for i in special_characters:
+        new_string = new_string.replace(i,"\\"+i)
+    return new_string
+
 
 def read_configfile(config_file):
     print(config_file)
@@ -236,8 +237,15 @@ def get_creds(credentials_file=None):
 def refresh_token(api_creds, api_base, tmp_dir):
     api_endpoint = urljoin(api_base, '/oauth/token')
 
+    auth_dir = os.path.join(tmp_dir, 'aura_api_auth')
+
+    if not os.path.isdir(auth_dir):
+        mkdir_cmd = 'mkdir ' + backslash_escape(auth_dir)
+        print(mkdir_cmd)
+        os.system(mkdir_cmd)
+
     #Check if tmp_dir exists
-    token_file = os.path.join(tmp_dir, 'bearer_token')
+    token_file = os.path.join(auth_dir, 'bearer_token')
     if os.path.isdir(tmp_dir):
         if os.path.isfile(token_file):
             token_file_exists = True
@@ -297,7 +305,7 @@ def authenticate_api(api_creds, api_base, tmp_dir):
     else:
         confirm_create = input('Create tmp directory {}? '.format(tmp_dir))
         if confirm_create.casefold() == 'y':
-            mkdir_cmd = 'mkdir ' + tmp_dir
+            mkdir_cmd = 'mkdir ' + backslash_escape(tmp_dir)
             os.system(mkdir_cmd)
 
 
@@ -331,8 +339,8 @@ def get_timestamp():
 def deploy_instance(access_token, api_base, instance_params):
     api_endpoint = urljoin(api_base, '/v1/instances')
 
-    instance_name = instance_params['INSTANCE_NAMEBASE']
-#    instance_name = instance_params['INSTANCE_NAMEBASE'] + '_' + get_timestamp()
+#    instance_name = instance_params['INSTANCE_NAMEBASE']
+    instance_name = instance_params['INSTANCE_NAMEBASE'] + '_' + get_timestamp()
     print('instance_name:', instance_name)
 
     instance_details = {}
@@ -388,24 +396,102 @@ def deploy_instance(access_token, api_base, instance_params):
 
     return instance_details
 
+def export_credentials(instance_details):
+    filename = 'Neo4j-' + instance_details['id'] + '-' + instance_details['name'] + '.txt' 
+    credentials_file = ""
+    credentials_file += 'NEO4J_URI=' + instance_details['connection_url'] + '\n'
+    credentials_file += 'NEO4J_USERNAME=' + instance_details['username'] + '\n'
+    credentials_file += 'NEO4J_PASSWORD=' + instance_details['password'] + '\n'
+    credentials_file += 'NEO4J_INSTANCEID=' + instance_details['id'] + '\n'
+    credentials_file += 'NEO4J_INSTANCENAME=' + instance_details['name'] + '\n'
+
+#    credential_dir = os.path.join(tmp_dir, 'aura_credentials')
+    if not os.path.isdir(credential_dir):
+        mkdir_cmd = 'mkdir ' + backslash_escape(credential_dir)
+        os.system(mkdir_cmd)
+
+    cred_file = os.path.join(credential_dir, filename)
+
+    print('\nWriting Aura instance credentials to file {}'.format(cred_file))
+    with open(cred_file, 'w') as f:
+        f.write(credentials_file)
+    return cred_file
+
+def export_envfile(environment_variables, export_dir=tmp_dir):
+    print('deployment_file:', environment_variables)
+    print('TYPE:', type(environment_variables))
+    print(environment_variables)
+
+#    export_dir = tmp_dir
+
+#    if subdir:
+#        export_dir = os.path.join(tmp_dir, subdir)
+
+    print('export_dir:', export_dir)
+    env_file = os.path.join(export_dir, environment_variables['DEPLOYMENT_NAME'] + '.txt')
+
+    if not os.path.isdir(export_dir):
+        mkdir_cmd = 'mkdir ' + backslash_escape(export_dir)
+        print(mkdir_cmd)
+        os.system(mkdir_cmd)
+
+    print('\nWriting demo deployment details to file {}'.format(env_file))
+    with open(env_file, 'w') as f:
+        f.write(json.dumps(environment_variables, indent=4))
+    return env_file
+
+def deploy_demo(deployment_parameters):
+    print('[in function] deployment_parameters:')
+    print(deployment_parameters)
+    cred_file = deployment_parameters['API_CREDENTIALS']
+    print('cred_file:', cred_file)
+    credentials = get_creds(cred_file)
+    print('credentials:', credentials)
+    bearer_token = authenticate_api(credentials, api_base, tmp_dir)
+    print('bearer_token:', bearer_token)
+
+    # Deploy the configure instance(s)
+    instance_details = deploy_instance(bearer_token, api_base, deployment_parameters)
+    demo_name = deployment_parameters['DEMO_NAME'] 
+    deployment_name = str(demo_name) + '_' + str(get_timestamp()) 
+    print()
+    print('instance_details:')
+    print(instance_details)
+
+    instance_credentials = export_credentials(instance_details)
+
+    deployment_details = {
+        'DEMO_NAME' : demo_name,
+        'DEPLOYMENT_NAME' : deployment_name,
+        'NEO4J_INSTANCENAME' : instance_details['name'],
+        'NEO4J_URI' : instance_details['connection_url'],
+        'NEO4J_USERNAME' : instance_details['username'],
+        'NEO4J_PASSWORD' : instance_details['password'],
+        'NEO4J_CREDENTIALS': instance_credentials,
+    }
+ 
+    deployment_file = export_envfile(deployment_details, export_dir=deployment_dir)
+    print('DEPLOYMENT_FILE:', deployment_file)
+
+def list_deployments(deployment_dir):
+    deployments = {} 
+    for dirname, subdir, filelist in os.walk(deployment_dir):
+        for file in filelist:
+            file_abspath = os.path.join(dirname, file)
+            print('file_abspath:', file_abspath)
+            f = open(file_abspath)
+            deployment_dict = json.load(f)
+            deployments[deployment_dict['DEPLOYMENT_NAME']] = deployment_dict
+
+    return deployments
 
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--demo-config', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
+    parser.add_argument('--deploy-demo', metavar="DEMO_CONFIG", help="Aura API credentials file")
     parser.add_argument('--deploy-instance', action='store_true', help="Deploy new Aura instance")
+    parser.add_argument('--list', action='store_true', help="Deploy new Aura instance")
+    parser.add_argument('--authenticate', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
     parser.add_argument('--refresh-token', action='store_true', help="Refresh bearer token")
-#    parser.add_argument('--api-credentials', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
-#    parser.add_argument('--list-instances', action='store_true', help="List Aura instances")
-#    parser.add_argument('--list-tenants', action='store_true', help="List Aura tenants")
-#    parser.add_argument('--tenant-info', metavar="TENANT_ID")
-#    parser.add_argument('--instance-info', metavar="INSTANCE_ID")
-#    parser.add_argument('--deploy-instance', metavar="INSTANCE_NAME", help="Deploy new Aura instance")
-#    parser.add_argument('--update-instance', metavar="INSTANCE_NAME", help="Rename or resize Aura instance")
-#    parser.add_argument('--delete-instance', metavar="INSTANCE_ID", help="Delete Aura instance")
-#    parser.add_argument('--instance-name', metavar="INSTANCE_NAME", help="Instance name")
-#    parser.add_argument('--instance-size', metavar="INSTANCE_SIZE", help="Instance size in GB")
-#    parser.add_argument('---id', metavar="INSTANCE_ID", help="Aura instance ID")
-#    parser.add_argument('--tenant-id', metavar="TENANT_ID", help="Tenant ID")
     args = parser.parse_args()	
     return vars(args)
 
@@ -414,100 +500,20 @@ def main():
 
     # Read in parameters from demo config ENV file. 
     # NOTE: Later on can do this with JSON as well
-    if args['demo_config']:
-        print('demo_config:', args['demo_config'])
-        deployment_parameters = read_configfile(args['demo_config'])
-        print('PARAMETERS:')
-        for param in deployment_parameters:
-            print(param, '=', deployment_parameters[param])
-        print()
+    if args['deploy_demo']:
+        deployment_parameters = read_configfile(args['deploy_demo'])
+        deploy_demo(deployment_parameters)
 
-    # Authenticate the API and get an access token
-    if deployment_parameters:
-        cred_file = deployment_parameters['API_CREDENTIALS']
-        print('cred_file:', cred_file)
+    if args['authenticate']:
+        cred_file = args['authenticate']
         credentials = get_creds(cred_file)
-        print('credentials:', credentials)
         bearer_token = authenticate_api(credentials, api_base, tmp_dir)
-        print('bearer_token:', bearer_token)
-    else:
-        print('TBD')
 
-    # In case user wants to force refresh the bearer token
-    if args['refresh_token']:
-        access_token = refresh_token(api_creds, api_base, tmp_dir)
-        print('New access token:')
-        print(access_token)
-
-    if args['deploy_instance']:
-        print('hello')
-        print(get_timestamp())
-        instance_details = deploy_instance(bearer_token, api_base, deployment_parameters)
-        print('instance_details:')
-        print(instance_details)
-"""
-
-    if args['api_credentials']:
-        api_creds = get_creds(args['api_credentials'])
-
-    api_creds = get_creds(cred_file)
-    access_token = authenticate_api(api_creds, api_base, tmp_dir)
-
-    if args['refresh_token']:
-        access_token = refresh_token(api_creds, api_base, tmp_dir)
-        print('New access token:')
-        print(access_token)
-
-    if args['list_tenants']:
+    if args['list']:
+        deployments = list_deployments(deployment_dir)
+        print('\nDeployments:')
+        print(json.dumps(deployments, indent=4))
         print()
-        print('list_tenants:')
-        aura_tenants = list_tenants(access_token, api_base, args['tenant_id'])
-        print()
-        print('Aura Tenants:')
-        print('-------------')
-        for tenant in aura_tenants:
-            print(aura_tenants[tenant])
-        print()
-
-    if args['tenant_info']:
-        print()
-        print('tenant_info:')
-        tenant_data = tenant_info(access_token, api_base, args['tenant_info'])
-        display_dict(tenant_data, description="Tenant Infomania")
-        #print('tenant_data:')
-        #print(tenant_data)
-
-    if args['instance_info']:
-        print()
-        print('instance_info:')
-        instance_data = instance_info(access_token, api_base, args['instance_info'])
-        print('instance_data:')
-        print(instance_data)
-
-    if args['list_instances']:
-        print('list_instances:')
-        aura_instances = list_instances(access_token, api_base, args['tenant_id'])
-        print()
-        print('Aura Instances:')
-        print('---------------')
-        for instance in aura_instances:
-            print(aura_instances[instance]['instance_name'])
-            for attr in aura_instances[instance]:
-                print( attr + ': ' + aura_instances[instance][attr])
-            print()
-        
-    if args['deploy_instance']:
-        instance_details = deploy_instance(access_token, api_base, args['deploy_instance'])
-        export_credentials(instance_details)
-
-    if args['update_instance']:
-        instance_details = update_instance(access_token, api_base, args['update_instance'], args['instance_name'], args['instance_size'])
-        
-    if args['delete_instance']:
-        delete_instance(access_token, api_base, args['delete_instance'])
-
-
-"""
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,6 @@
+# Demo Info
+DEMO_NAME="sample_test_demo"
+
 # Aura Account Info
 API_CREDENTIALS="/Users/lrazo/Frigomex Dropbox/Lee Razo/__professional/_documents_neo4j/demo/aura_api/Neo4j-credentials-my_aura_api_key-Created-2024-01-12.txt"
 AURA_TENANT="e35ffd72-566a-5163-bf80-41a65f4bd5e0"
