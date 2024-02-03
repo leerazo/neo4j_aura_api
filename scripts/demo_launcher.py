@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+from dotenv import dotenv_values
+import time
+
+
 import os
 import dotenv
 import json
@@ -12,99 +16,14 @@ import graphdatascience
 
 # TEMP CONSTANTS
 api_base = 'https://api.neo4j.io/'
-tmp_dir = './.tmp'
+
+# CHANGE THIS
+tmp_dir = '/Users/lrazo/.tmp' 
+
 # I'll need to replace this later with either something interactive or a standard JSON template that will contain this information. 
 default_cred_file = os.path.join(tmp_dir, "neo4j-api-creds.txt") 
 
 cred_file = default_cred_file
-
-# Input API credentials file and output dictionary with CLIENT_ID CLIENT_SECRET and CLIENT_NAME
-def get_creds(credentials_file=None):
-    if credentials_file:
-        api_creds = dotenv.dotenv_values(credentials_file)
-    return dict(api_creds)
-
-def refresh_token(api_creds, api_base, tmp_dir):
-    api_endpoint = urljoin(api_base, '/oauth/token')
-
-    #Check if tmp_dir exists
-    token_file = os.path.join(tmp_dir, 'bearer_token')
-    if os.path.isdir(tmp_dir):
-        if os.path.isfile(token_file):
-            token_file_exists = True
-    else:
-        confirm_create = input('Create tmp directory {}? '.format(tmp_dir))
-        if confirm_create.casefold() == 'y':
-            mkdir_cmd = 'mkdir ' + tmp_dir
-            os.system(mkdir_cmd) 
-            
-    curl_cmd = "curl --request POST '{}' --user '{}:{}' --header 'Content-Type: application/x-www-form-urlencoded' --data-urlencode 'grant_type=client_credentials'".format(api_endpoint, api_creds['CLIENT_ID'], api_creds['CLIENT_SECRET'], api_creds['CLIENT_NAME'])
-    result = json.loads(subprocess.check_output(curl_cmd, shell=True))
-    access_token = result['access_token']
-    expires_in = result['expires_in']
-
-    now = datetime.datetime.now()
-    expiration = (now + datetime.timedelta(0, expires_in)).isoformat()
-
-    bearer_token = {
-        'access_token': access_token,
-        'expiration': expiration
-    }
-
-    with open(token_file, "w") as outfile:
-        json.dump(bearer_token, outfile, indent=4)
-
-    access_token = bearer_token['access_token']
-    return access_token 
-
-# Check if token is valid for at least 5 more minutes (later on can add a variable to adjust the time window)
-def validate_token(bearer_token):
-    token_valid = False
-    token_expiration = datetime.datetime.fromisoformat(str(bearer_token['expiration']))
-    delta_time = (token_expiration - datetime.datetime.now()).total_seconds()
-
-    print('delta_time:', delta_time)
-
-    # Make sure token has at least 5 more minutes of validity left
-    if delta_time > 300:
-        print('token_expiration:', token_expiration)
-        print('Token is valid for {} more minutes'.format(delta_time/60)) 
-        token_valid = True
-
-    return token_valid
-
-# Input API credentials ans return an access token for the API
-def authenticate_api(api_creds, api_base, tmp_dir):
-
-    api_endpoint = urljoin(api_base, '/oauth/token')
-    token_file_exists = False 
-    valid_token = False
-
-    #Check if tmp_dir exists
-    token_file = os.path.join(tmp_dir, 'bearer_token')
-    if os.path.isdir(tmp_dir):
-        if os.path.isfile(token_file):
-            token_file_exists = True
-    else:
-        confirm_create = input('Create tmp directory {}? '.format(tmp_dir))
-        if confirm_create.casefold() == 'y':
-            mkdir_cmd = 'mkdir ' + tmp_dir
-            os.system(mkdir_cmd)
-
-
-    if token_file_exists:
-        with open(token_file, "r") as infile:
-            bearer_token = json.load(infile)
-
-        valid_token = validate_token(bearer_token)
-
-    # If there is no valid token, then generate a new one
-    if valid_token:
-        access_token = bearer_token['access_token']
-    else:
-        access_token = refresh_token(api_creds, api_base, tmp_dir)
-
-    return access_token
 
 
 def list_tenants(access_token, api_base, tenant_id=None):
@@ -208,57 +127,6 @@ def instance_info(access_token, api_base, instance_id):
 
     return response_data
 
-def deploy_instance(access_token, api_base, instance_name):
-    api_endpoint = urljoin(api_base, '/v1/instances')
-
-    instance_details = {}
-
-    print()
-    print('api_endpoint:', api_endpoint)
-    print()
-    request_body = {
-        "version": "5",
-        "region": "europe-west1",
-        "memory": "16GB",
-        "name": instance_name,
-        "type": "professional-ds",
-        "tenant_id": "e35ffd72-566a-5163-bf80-41a65f4bd5e0",
-        "cloud_provider": "gcp"
-    }
-
-    print('request body type (before):', type(request_body))
-    json_request_body = json.dumps(request_body)
-    print('request body type (after):', type(json_request_body))
-
-    curl_cmd = "curl -s -X 'POST' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}' -H 'Content-Type: application/json'".format(api_endpoint, access_token)
-    curl_cmd += " -d '{}'".format(json_request_body)
-    print('curl_cmd:')
-    print(curl_cmd)
-    api_response = json.loads(subprocess.check_output(curl_cmd, shell=True))
-
-    print('New instance created:')
-    print(api_response)
-    
-    response_data = api_response['data']
-    
-    instance_details['id'] = response_data['id']
-    instance_details['name'] = response_data['name']
-    instance_details['connection_url'] = response_data['connection_url']
-    instance_details['password'] = response_data['password']
-    instance_details['username'] = response_data['username']
-    instance_details['cloud_provider'] = response_data['cloud_provider']
-    instance_details['region'] = response_data['region']
-    instance_details['tenant_id'] = response_data['tenant_id']
-    instance_details['type'] = response_data['type']
-
-    print()
-    print('instance_details:')
-    for item in instance_details:
-        print(item, '=', instance_details[item])
-    print()
-
-    return instance_details
-
 def update_instance(access_token, api_base, instance_id, instance_name, instance_size):
     api_endpoint = urljoin(api_base, '/v1/instances/' + instance_id)
 
@@ -352,26 +220,232 @@ def display_dict(dictionary, description=None):
                     for l3 in dictionary[l1][l2]:
                         print('\t\t' + str(l3))
 
+##### START NEW FROM HERE ####
+
+def read_configfile(config_file):
+    print(config_file)
+    parameters = dict(dotenv_values(config_file))
+    return parameters
+
+# Input API credentials file and output dictionary with CLIENT_ID CLIENT_SECRET and CLIENT_NAME
+def get_creds(credentials_file=None):
+    if credentials_file:
+        api_creds = dotenv.dotenv_values(credentials_file)
+    return dict(api_creds)
+
+def refresh_token(api_creds, api_base, tmp_dir):
+    api_endpoint = urljoin(api_base, '/oauth/token')
+
+    #Check if tmp_dir exists
+    token_file = os.path.join(tmp_dir, 'bearer_token')
+    if os.path.isdir(tmp_dir):
+        if os.path.isfile(token_file):
+            token_file_exists = True
+    else:
+        confirm_create = input('Create tmp directory {}? '.format(tmp_dir))
+        if confirm_create.casefold() == 'y':
+            mkdir_cmd = 'mkdir ' + tmp_dir
+            os.system(mkdir_cmd) 
+            
+    curl_cmd = "curl --request POST '{}' --user '{}:{}' --header 'Content-Type: application/x-www-form-urlencoded' --data-urlencode 'grant_type=client_credentials'".format(api_endpoint, api_creds['CLIENT_ID'], api_creds['CLIENT_SECRET'], api_creds['CLIENT_NAME'])
+    result = json.loads(subprocess.check_output(curl_cmd, shell=True))
+    access_token = result['access_token']
+    expires_in = result['expires_in']
+
+    now = datetime.datetime.now()
+    expiration = (now + datetime.timedelta(0, expires_in)).isoformat()
+
+    bearer_token = {
+        'access_token': access_token,
+        'expiration': expiration
+    }
+
+    with open(token_file, "w") as outfile:
+        json.dump(bearer_token, outfile, indent=4)
+
+    access_token = bearer_token['access_token']
+    return access_token 
+
+# Check if token is valid for at least 5 more minutes (later on can add a variable to adjust the time window)
+def validate_token(bearer_token):
+    token_valid = False
+    token_expiration = datetime.datetime.fromisoformat(str(bearer_token['expiration']))
+    delta_time = (token_expiration - datetime.datetime.now()).total_seconds()
+
+    print('delta_time:', delta_time)
+
+    # Make sure token has at least 5 more minutes of validity left
+    if delta_time > 300:
+        print('token_expiration:', token_expiration)
+        print('Token is valid for {} more minutes'.format(delta_time/60)) 
+        token_valid = True
+
+    return token_valid
+
+# Input API credentials ans return an access token for the API
+def authenticate_api(api_creds, api_base, tmp_dir):
+
+    api_endpoint = urljoin(api_base, '/oauth/token')
+    token_file_exists = False 
+    valid_token = False
+
+    #Check if tmp_dir exists
+    token_file = os.path.join(tmp_dir, 'bearer_token')
+    if os.path.isdir(tmp_dir):
+        if os.path.isfile(token_file):
+            token_file_exists = True
+    else:
+        confirm_create = input('Create tmp directory {}? '.format(tmp_dir))
+        if confirm_create.casefold() == 'y':
+            mkdir_cmd = 'mkdir ' + tmp_dir
+            os.system(mkdir_cmd)
+
+
+    if token_file_exists:
+        with open(token_file, "r") as infile:
+            bearer_token = json.load(infile)
+
+        valid_token = validate_token(bearer_token)
+
+    # If there is no valid token, then generate a new one
+    if valid_token:
+        access_token = bearer_token['access_token']
+    else:
+        access_token = refresh_token(api_creds, api_base, tmp_dir)
+
+    return access_token
+
+def get_timestamp():
+    current_localtime = time.localtime()
+    timestamp = str(current_localtime[0]).zfill(4) + \
+                     str(current_localtime[1]).zfill(2) + \
+                     str(current_localtime[2]).zfill(2) + \
+                     "T" + \
+                    str(current_localtime[3]).zfill(2) + \
+                    str(current_localtime[4]).zfill(2) + \
+                    str(current_localtime[5]).zfill(2) 
+
+    return timestamp
+
+
+def deploy_instance(access_token, api_base, instance_params):
+    api_endpoint = urljoin(api_base, '/v1/instances')
+
+    instance_name = instance_params['INSTANCE_NAMEBASE']
+#    instance_name = instance_params['INSTANCE_NAMEBASE'] + '_' + get_timestamp()
+    print('instance_name:', instance_name)
+
+    instance_details = {}
+
+    # ENTER A STEP HERE TO VALIDATE CONFIG BEFORE DEPLOYING
+
+    print()
+    print('api_endpoint:', api_endpoint)
+    print()
+    request_body = {
+        "version": instance_params['NEO4J_VERSION'],
+        "region": instance_params['REGION'],
+        "memory": str(instance_params['INSTANCE_SIZE']) + 'GB',
+        "name": instance_name,
+        "type": instance_params['INSTANCE_TYPE'],
+        "tenant_id": instance_params['AURA_TENANT'],
+        "cloud_provider": instance_params['CLOUD_PROVIDER'], 
+    }
+
+    print('request_body:')
+    print(json.dumps(request_body, indent=4))
+
+    print('request body type (before):', type(request_body))
+    json_request_body = json.dumps(request_body)
+    print('request body type (after):', type(json_request_body))
+
+    curl_cmd = "curl -s -X 'POST' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}' -H 'Content-Type: application/json'".format(api_endpoint, access_token)
+    curl_cmd += " -d '{}'".format(json_request_body)
+    print('curl_cmd:')
+    print(curl_cmd)
+    api_response = json.loads(subprocess.check_output(curl_cmd, shell=True))
+
+    print('New instance created:')
+    print(api_response)
+    
+    response_data = api_response['data']
+    
+    instance_details['id'] = response_data['id']
+    instance_details['name'] = response_data['name']
+    instance_details['connection_url'] = response_data['connection_url']
+    instance_details['password'] = response_data['password']
+    instance_details['username'] = response_data['username']
+    instance_details['cloud_provider'] = response_data['cloud_provider']
+    instance_details['region'] = response_data['region']
+    instance_details['tenant_id'] = response_data['tenant_id']
+    instance_details['type'] = response_data['type']
+
+    print()
+    print('instance_details:')
+    for item in instance_details:
+        print(item, '=', instance_details[item])
+    print()
+
+    return instance_details
+
+
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--api-credentials', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
-    parser.add_argument('--list-instances', action='store_true', help="List Aura instances")
-    parser.add_argument('--list-tenants', action='store_true', help="List Aura tenants")
-    parser.add_argument('--tenant-info', metavar="TENANT_ID")
-    parser.add_argument('--instance-info', metavar="INSTANCE_ID")
-    parser.add_argument('--deploy-instance', metavar="INSTANCE_NAME", help="Deploy new Aura instance")
-    parser.add_argument('--update-instance', metavar="INSTANCE_NAME", help="Rename or resize Aura instance")
-    parser.add_argument('--delete-instance', metavar="INSTANCE_ID", help="Delete Aura instance")
-    parser.add_argument('--instance-name', metavar="INSTANCE_NAME", help="Instance name")
-    parser.add_argument('--instance-size', metavar="INSTANCE_SIZE", help="Instance size in GB")
-    parser.add_argument('---id', metavar="INSTANCE_ID", help="Aura instance ID")
-    parser.add_argument('--tenant-id', metavar="TENANT_ID", help="Tenant ID")
+    parser.add_argument('--demo-config', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
+    parser.add_argument('--deploy-instance', action='store_true', help="Deploy new Aura instance")
     parser.add_argument('--refresh-token', action='store_true', help="Refresh bearer token")
+#    parser.add_argument('--api-credentials', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
+#    parser.add_argument('--list-instances', action='store_true', help="List Aura instances")
+#    parser.add_argument('--list-tenants', action='store_true', help="List Aura tenants")
+#    parser.add_argument('--tenant-info', metavar="TENANT_ID")
+#    parser.add_argument('--instance-info', metavar="INSTANCE_ID")
+#    parser.add_argument('--deploy-instance', metavar="INSTANCE_NAME", help="Deploy new Aura instance")
+#    parser.add_argument('--update-instance', metavar="INSTANCE_NAME", help="Rename or resize Aura instance")
+#    parser.add_argument('--delete-instance', metavar="INSTANCE_ID", help="Delete Aura instance")
+#    parser.add_argument('--instance-name', metavar="INSTANCE_NAME", help="Instance name")
+#    parser.add_argument('--instance-size', metavar="INSTANCE_SIZE", help="Instance size in GB")
+#    parser.add_argument('---id', metavar="INSTANCE_ID", help="Aura instance ID")
+#    parser.add_argument('--tenant-id', metavar="TENANT_ID", help="Tenant ID")
     args = parser.parse_args()	
     return vars(args)
 
 def main():
     args = parseargs()
+
+    # Read in parameters from demo config ENV file. 
+    # NOTE: Later on can do this with JSON as well
+    if args['demo_config']:
+        print('demo_config:', args['demo_config'])
+        deployment_parameters = read_configfile(args['demo_config'])
+        print('PARAMETERS:')
+        for param in deployment_parameters:
+            print(param, '=', deployment_parameters[param])
+        print()
+
+    # Authenticate the API and get an access token
+    if deployment_parameters:
+        cred_file = deployment_parameters['API_CREDENTIALS']
+        print('cred_file:', cred_file)
+        credentials = get_creds(cred_file)
+        print('credentials:', credentials)
+        bearer_token = authenticate_api(credentials, api_base, tmp_dir)
+        print('bearer_token:', bearer_token)
+    else:
+        print('TBD')
+
+    # In case user wants to force refresh the bearer token
+    if args['refresh_token']:
+        access_token = refresh_token(api_creds, api_base, tmp_dir)
+        print('New access token:')
+        print(access_token)
+
+    if args['deploy_instance']:
+        print('hello')
+        print(get_timestamp())
+        instance_details = deploy_instance(bearer_token, api_base, deployment_parameters)
+        print('instance_details:')
+        print(instance_details)
+"""
 
     if args['api_credentials']:
         api_creds = get_creds(args['api_credentials'])
@@ -433,6 +507,7 @@ def main():
         delete_instance(access_token, api_base, args['delete_instance'])
 
 
+"""
 
 if __name__ == '__main__':
     main()

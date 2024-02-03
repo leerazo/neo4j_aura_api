@@ -1,0 +1,14 @@
+# Aura Account Info
+API_CREDENTIALS="/Users/lrazo/Frigomex Dropbox/Lee Razo/__professional/_documents_neo4j/demo/aura_api/Neo4j-credentials-my_aura_api_key-Created-2024-01-12.txt"
+AURA_TENANT="e35ffd72-566a-5163-bf80-41a65f4bd5e0"
+
+# Neo4j Instance Info
+INSTANCE_NAMEBASE="leerazo_aura"    # There will be a timestamp added as a suffix
+DEPLOYMENT_TYPE="aura" 		# "aura" or "ee"
+INSTANCE_TYPE="professional-ds"	# "free-db", "professional-db", "professional-ds", "enterprise-db", or "enterprise-ds"
+NEO4J_VERSION=5
+INSTANCE_SIZE=16
+
+# Cloud Provider Info
+CLOUD_PROVIDER="gcp"
+REGION="europe-west1"
