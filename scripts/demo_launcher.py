@@ -157,37 +157,6 @@ def update_instance(access_token, api_base, instance_id, instance_name, instance
     print('Instance updated:')
     print(api_response)
 
-
-def delete_instance(access_token, api_base, instance_id):
-    api_endpoint = urljoin(api_base, '/v1/instances/' + instance_id)
-
-    print()
-    print('api_endpoint:', api_endpoint)
-    print()
-
-    curl_cmd = "curl -s -X 'DELETE' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}'".format(api_endpoint, access_token)
-
-    print("curl_cmd:")
-    print(curl_cmd)
-
-    api_response = json.loads(subprocess.check_output(curl_cmd, shell=True))
-
-    print('api_response:')
-    print(api_response)
-
-    if 'data' in api_response:
-        instance_id = api_response['data']['id']
-        instance_name = api_response['data']['name']
-        print('instance_id:', instance_id)
-        print('instance_name:', instance_name)
-
-        cred_filename = os.path.join(tmp_dir, 'Neo4j-' + instance_id + '-' + instance_name + '.txt')
-        print('cred_filename:', cred_filename)
-        
-        # Delete the credential file if it still exists
-        print('Deleting instance credential file {}'.format(cred_filename))
-        if os.path.isfile(cred_filename):
-            os.system('rm ' + cred_filename)
     
 def display_dict(dictionary, description=None):
     if description:
@@ -396,6 +365,37 @@ def deploy_instance(access_token, api_base, instance_params):
 
     return instance_details
 
+def delete_instance(access_token, api_base, instance_id):
+    api_endpoint = urljoin(api_base, '/v1/instances/' + instance_id)
+
+    print()
+    print('api_endpoint:', api_endpoint)
+    print()
+
+    curl_cmd = "curl -s -X 'DELETE' '{}' -H 'accept: application/json' -H 'Authorization: Bearer {}'".format(api_endpoint, access_token)
+
+    print("curl_cmd:")
+    print(curl_cmd)
+
+    api_response = json.loads(subprocess.check_output(curl_cmd, shell=True))
+
+    print('api_response:')
+    print(api_response)
+
+    if 'data' in api_response:
+        instance_id = api_response['data']['id']
+        instance_name = api_response['data']['name']
+        print('instance_id:', instance_id)
+        print('instance_name:', instance_name)
+
+        cred_filename = os.path.join(tmp_dir, 'Neo4j-' + instance_id + '-' + instance_name + '.txt')
+        print('cred_filename:', cred_filename)
+        
+        # Delete the credential file if it still exists
+        print('Deleting instance credential file {}'.format(cred_filename))
+        if os.path.isfile(cred_filename):
+            os.system('rm ' + cred_filename)
+
 def export_credentials(instance_details):
     filename = 'Neo4j-' + instance_details['id'] + '-' + instance_details['name'] + '.txt' 
     credentials_file = ""
@@ -465,6 +465,7 @@ def deploy_demo(deployment_parameters):
         'DEPLOYMENT_NAME' : deployment_name,
         'NEO4J_INSTANCENAME' : instance_details['name'],
         'NEO4J_URI' : instance_details['connection_url'],
+        'NEO4J_INSTANCEID' : instance_details['id'],
         'NEO4J_USERNAME' : instance_details['username'],
         'NEO4J_PASSWORD' : instance_details['password'],
         'NEO4J_CREDENTIALS': instance_credentials,
@@ -472,6 +473,8 @@ def deploy_demo(deployment_parameters):
  
     deployment_file = export_envfile(deployment_details, export_dir=deployment_dir)
     print('DEPLOYMENT_FILE:', deployment_file)
+    
+    return bearer_token, deployment_details
 
 def list_deployments(deployment_dir):
     deployments = {} 
@@ -485,10 +488,32 @@ def list_deployments(deployment_dir):
 
     return deployments
 
+def delete_deployment(deployment_name):
+    print('DELETE deplyment_name')
+
+def clean_up(deployment_dir):
+    print('deployment_dir:', deployment_dir)
+    deployments = list_deployments(deployment_dir)
+    options = {}
+    for index, item in enumerate(deployments):
+        deployment_name = deployments[item]['DEPLOYMENT_NAME']
+        options[index+1] = deployments[item]
+        print('[' + str(index + 1) + ']', deployment_name)
+
+    selection = input('Enter selection number: ')
+    print('\nSelection:')
+    print(options[int(selection)])
+
+    # This bit can probably all be replaced in 'delete_deplyment'
+    instance_id = options[int(selection)]['NEO4J_INSTANCEID']
+    print('instance_id:', instance_id)
+
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--deploy-demo', metavar="DEMO_CONFIG", help="Aura API credentials file")
     parser.add_argument('--deploy-instance', action='store_true', help="Deploy new Aura instance")
+    parser.add_argument('--delete-demo', metavar='DEPLOYMENT_NAME', help="Deploy new Aura instance")
+    parser.add_argument('--clean-up', action='store_true', help="Deploy new Aura instance")
     parser.add_argument('--list', action='store_true', help="Deploy new Aura instance")
     parser.add_argument('--authenticate', metavar="CREDENTIALS_FILE", help="Aura API credentials file")
     parser.add_argument('--refresh-token', action='store_true', help="Refresh bearer token")
@@ -514,6 +539,9 @@ def main():
         print('\nDeployments:')
         print(json.dumps(deployments, indent=4))
         print()
+
+    if args['clean_up']:
+        clean_up(deployment_dir)
 
 if __name__ == '__main__':
     main()
