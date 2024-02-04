@@ -23,6 +23,7 @@ tmp_dir = '/Users/lrazo/Frigomex Dropbox/Lee Razo/__tech/sysadmin/tmp/neo4j_demo
 deployment_dir = os.path.join(tmp_dir, 'demo_deployments')
 credential_dir = os.path.join(tmp_dir, 'aura_credentials')
 auth_dir = os.path.join(tmp_dir, 'aura_api_auth')
+token_file = os.path.join(auth_dir, 'bearer_token')
 
 # I'll need to replace this later with either something interactive or a standard JSON template that will contain this information. 
 default_cred_file = os.path.join(tmp_dir, "neo4j-api-creds.txt") 
@@ -259,6 +260,11 @@ def validate_token(bearer_token):
 
     return token_valid
 
+def get_token(token_file):
+    with open(token_file, "r") as f:
+        access_token = json.load(f)['access_token']
+    return access_token
+
 # Input API credentials ans return an access token for the API
 def authenticate_api(api_creds, api_base, tmp_dir):
 
@@ -480,16 +486,45 @@ def list_deployments(deployment_dir):
     deployments = {} 
     for dirname, subdir, filelist in os.walk(deployment_dir):
         for file in filelist:
-            file_abspath = os.path.join(dirname, file)
-            print('file_abspath:', file_abspath)
-            f = open(file_abspath)
-            deployment_dict = json.load(f)
-            deployments[deployment_dict['DEPLOYMENT_NAME']] = deployment_dict
+
+#### NOTE: I need to come up with a stricter filter than this to avoid garbage files from screwing up this step
+
+            if file.casefold() != '.ds_store':
+                file_abspath = os.path.join(dirname, file)
+                print('file_abspath:', file_abspath)
+                f = open(file_abspath)
+                deployment_dict = json.load(f)
+                deployments[deployment_dict['DEPLOYMENT_NAME']] = deployment_dict
 
     return deployments
 
-def delete_deployment(deployment_name):
-    print('DELETE deplyment_name')
+def delete_deployment(deployment_details):
+    deployment_name = deployment_details['DEPLOYMENT_NAME']
+    instance_id = deployment_details['NEO4J_INSTANCEID']
+    credentials_file = deployment_details['NEO4J_CREDENTIALS'] 
+    print('DELETE deplyment_name:', deployment_name)
+    access_token = get_token(token_file)
+    print('access_token:', access_token)
+    print('api_endpoint:', api_base)
+    print('instance_id:', instance_id)
+    print('credentials_file:', credentials_file)
+
+    # Deleting associated Aura instance
+    delete_instance(access_token, api_base, instance_id)
+
+    # Delete the aura credentials file for the instance
+    print('Deleting aura credentials file at {}'.format(credentials_file))
+    os.system('rm ' + backslash_escape(credentials_file))
+
+    # Delete the deployment config file
+    deployment_config = os.path.join(deployment_dir, deployment_name + '.txt')
+    print('deployment_config:', deployment_config)
+    if os.path.isfile(deployment_config):
+        print('Deleting deployment_config file')
+        os.system('rm ' + backslash_escape(deployment_config))
+    else:
+        print("Hmm, that's weird, I can't find the damn file.")
+
 
 def clean_up(deployment_dir):
     print('deployment_dir:', deployment_dir)
@@ -504,9 +539,17 @@ def clean_up(deployment_dir):
     print('\nSelection:')
     print(options[int(selection)])
 
+    selected_deployment = options[int(selection)]
+
     # This bit can probably all be replaced in 'delete_deplyment'
-    instance_id = options[int(selection)]['NEO4J_INSTANCEID']
+    deployment_name = selected_deployment['DEPLOYMENT_NAME']
+    instance_id = selected_deployment['NEO4J_INSTANCEID']
     print('instance_id:', instance_id)
+    confirm_delete = input('Delete deployment {}? (y/n): '.format(deployment_name))
+    if confirm_delete.casefold() == 'y':
+        print('Fuck yeah!')
+        delete_deployment(selected_deployment)
+        
 
 def parseargs(defaults=None, config_files=None):
     parser = argparse.ArgumentParser()
@@ -522,6 +565,10 @@ def parseargs(defaults=None, config_files=None):
 
 def main():
     args = parseargs()
+
+#    access_token = get_token(token_file)
+#    print('access_token:', access_token)
+#    exit()
 
     # Read in parameters from demo config ENV file. 
     # NOTE: Later on can do this with JSON as well
