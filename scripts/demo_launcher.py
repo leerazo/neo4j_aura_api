@@ -22,6 +22,7 @@ api_base = 'https://api.neo4j.io/'
 tmp_dir = '/Users/lrazo/Frigomex Dropbox/Lee Razo/__tech/sysadmin/tmp/neo4j_demo_launcher' 
 deployment_dir = os.path.join(tmp_dir, 'demo_deployments')
 credential_dir = os.path.join(tmp_dir, 'aura_credentials')
+dataflow_template_dir = os.path.join(tmp_dir, 'dataflow')
 auth_dir = os.path.join(tmp_dir, 'aura_api_auth')
 token_file = os.path.join(auth_dir, 'bearer_token')
 
@@ -446,6 +447,19 @@ def export_envfile(environment_variables, export_dir=tmp_dir):
         f.write(json.dumps(environment_variables, indent=4))
     return env_file
 
+def dataflow_connection_template(aura_creds):
+    print()
+    print('aura_creds:', aura_creds)
+    print()
+    json_creds = {}
+    json_creds['server_url'] = aura_creds['uri']
+    json_creds['database'] = 'neo4j' 
+    json_creds['auth_type'] = 'basic' 
+    json_creds['username'] = aura_creds['user']
+    json_creds['pwd'] = aura_creds['password']
+
+    return json.dumps(json_creds, indent=4)
+
 def deploy_demo(deployment_parameters):
     print('[in function] deployment_parameters:')
     print(deployment_parameters)
@@ -459,6 +473,11 @@ def deploy_demo(deployment_parameters):
     # Deploy the configure instance(s)
     instance_details = deploy_instance(bearer_token, api_base, deployment_parameters)
     demo_name = deployment_parameters['DEMO_NAME'] 
+    new_password = deployment_parameters['PASSWORD']
+    print()
+    print('new_password:', new_password)
+    print()
+#    exit()
     deployment_name = str(demo_name) + '_' + str(get_timestamp()) 
     print()
     print('instance_details:')
@@ -480,6 +499,25 @@ def deploy_demo(deployment_parameters):
     deployment_file = export_envfile(deployment_details, export_dir=deployment_dir)
     print('DEPLOYMENT_FILE:', deployment_file)
     
+    data_source = deployment_parameters['DATASOURCE']
+
+    if data_source.casefold() == 'dataflow':
+
+        aura_creds = {
+            'uri': deployment_details['NEO4J_URI'],
+            'user': deployment_details['NEO4J_USERNAME'],
+            'password': deployment_details['NEO4J_PASSWORD'],
+        }
+
+        dataflow_connection = dataflow_connection_template(aura_creds)
+        dataflow_templatefile = os.path.join(dataflow_template_dir, 'neo4j-connections-' + deployment_name + '.json')
+        print()
+        print('dataflow_connection:', dataflow_connection)
+        print()
+        print('Saving to file {}'.format(dataflow_templatefile))
+        with open(dataflow_templatefile, 'w') as f:
+            f.write(dataflow_connection)
+
     return bearer_token, deployment_details
 
 def list_deployments(deployment_dir):
