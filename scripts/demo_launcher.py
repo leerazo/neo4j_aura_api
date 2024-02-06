@@ -496,9 +496,6 @@ def deploy_demo(deployment_parameters):
         'NEO4J_CREDENTIALS': instance_credentials,
     }
  
-    deployment_file = export_envfile(deployment_details, export_dir=deployment_dir)
-    print('DEPLOYMENT_FILE:', deployment_file)
-    
     data_source = deployment_parameters['DATASOURCE']
 
     if data_source.casefold() == 'dataflow':
@@ -517,6 +514,14 @@ def deploy_demo(deployment_parameters):
         print('Saving to file {}'.format(dataflow_templatefile))
         with open(dataflow_templatefile, 'w') as f:
             f.write(dataflow_connection)
+        deployment_details['DATAFLOW_TEMPLATE'] = dataflow_templatefile
+
+        print('check')
+        for item in deployment_details:
+            print(item, '=', deployment_details[item])
+        print()
+
+    deployment_file = export_envfile(deployment_details, export_dir=deployment_dir)
 
     return bearer_token, deployment_details
 
@@ -537,6 +542,9 @@ def list_deployments(deployment_dir):
     return deployments
 
 def delete_deployment(deployment_details):
+    for item in deployment_details:
+        print(item, '=', deployment_details[item])
+    print()
     deployment_name = deployment_details['DEPLOYMENT_NAME']
     instance_id = deployment_details['NEO4J_INSTANCEID']
     credentials_file = deployment_details['NEO4J_CREDENTIALS'] 
@@ -553,6 +561,11 @@ def delete_deployment(deployment_details):
     # Delete the aura credentials file for the instance
     print('Deleting aura credentials file at {}'.format(credentials_file))
     os.system('rm ' + backslash_escape(credentials_file))
+
+    if 'DATAFLOW_TEMPLATE' in deployment_details:
+        df_template = deployment_details['DATAFLOW_TEMPLATE']
+        print('Deleting Dataflow connections template {}'.format(df_template))
+        os.system('rm ' + backslash_escape(df_template))
 
     # Delete the deployment config file
     deployment_config = os.path.join(deployment_dir, deployment_name + '.txt')
